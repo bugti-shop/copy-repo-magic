@@ -963,7 +963,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
       
       const { data: { user } } = await supabase.auth.getUser();
       
-      await supabase.from('onboarding_responses' as any).insert({
+      await (supabase as any).from('onboarding_responses').insert({
         device_id: deviceId,
         user_email: user?.email || null,
         language: selectedLang,
