@@ -1103,7 +1103,7 @@ export const SubscriptionProvider = ({ children }: { children: ReactNode }) => {
         console.log('[Realtime] Subscribing to entitlements for', appUserID);
 
         // Initial fetch
-        const { data: existing } = await supabase
+        const { data: existing } = await (supabase as any)
           .from('user_entitlements')
           .select('*')
           .eq('app_user_id', appUserID)
