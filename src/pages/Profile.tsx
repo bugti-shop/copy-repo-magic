@@ -72,8 +72,19 @@ export default function Profile() {
   }, [location.state]);
 
   const handleSignIn = async () => {
+    // Safety timeout: on the iOS simulator the native Google Sign-In sheet
+    // can silently fail to invoke its callback, leaving the spinner forever.
+    // Race the sign-in against a 60s timeout so the UI always recovers.
+    const timeoutMs = 60_000;
+    const signInWithTimeout = Promise.race([
+      signIn(true),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs),
+      ),
+    ]);
+
     try {
-      const googleUser = await signIn(true);
+      const googleUser = await signInWithTimeout;
       toast({ title: t('profile.signInSuccess', 'Signed in successfully'), description: t('profile.signInSuccessCloud', 'Your account is connected for real-time sync.') });
       // Run RevenueCat init in background — don't block the UI
       (async () => {
@@ -85,8 +96,13 @@ export default function Profile() {
         }
       })();
     } catch (err: any) {
+      if (err?.message === '__OAUTH_REDIRECT__') return; // expected on web
       console.error('Sign-in error:', err);
-      toast({ title: t('profile.signInFailed', 'Sign-in failed'), description: err?.message || t('common.retry', 'Please try again.'), variant: 'destructive' });
+      const description =
+        err?.message === 'TIMEOUT'
+          ? t('profile.signInTimeout', 'Sign-in took too long. On the iOS simulator, try a real device — Google Sign-In often hangs in the simulator.')
+          : err?.message || t('common.retry', 'Please try again.');
+      toast({ title: t('profile.signInFailed', 'Sign-in failed'), description, variant: 'destructive' });
     }
   };
 
